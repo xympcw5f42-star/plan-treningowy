@@ -418,14 +418,26 @@ function updateCardState(exId){
 
 // ── COMPLETION HELPERS ────────────────────────────────────────────────────
 const CONGRATS_MSGS = [
-  ["🔥", "Płonie!", "Seria za serią, kg za kg. Macie to w małym palcu."],
-  ["💪", "Solidna robota!", "Każdy trening to cegiełka. Dziś cegła ułożona."],
-  ["⚡", "Błyskawica!", "Szybko, sprawnie, bez wymówek. Tak się robi."],
-  ["🏆", "Mistrzowie!", "Plan wykonany w 100%. Jutro odpoczynek zasłużony."],
-  ["🚀", "Na orbicie!", "Trening zrobiony. Postęp nie czeka na leniuchów."],
-  ["🎯", "W punkt!", "Wszystkie ćwiczenia odhaczone. Plan respektowany."],
-  ["💥", "Bomb session!", "Czuć zmęczenie? Dobrze. To znaczy że się stara."],
-  ["🌟", "Gwiazdy!", "Taki trening to inwestycja w siebie. Zwraca się z odsetkami."],
+  ["🔥", "Płonie!", "Seria za serią, kg za kg. Sąsiedzi słyszą już wasze westchnienia przez ścianę."],
+  ["💪", "Solidna robota!", "Kanapę dziś widzieliście tylko chwilę — żeby po niej przejść do drzwi wyjściowych."],
+  ["⚡", "Błyskawica!", "Wyszliście z domu, wróciliście silniejsi. Lodówka powie dziś: zasłużyliście."],
+  ["🏆", "Mistrzowie!", "Gdzie inni wymyślają powody żeby nie iść — wy już wracacie."],
+  ["🚀", "Na orbicie!", "Ciało pyta: serio znowu? Głowa odpowiada: tak, i jeszcze raz w czwartek."],
+  ["🎯", "W punkt!", "Sztanga nie kłamie. Cyferki w górę, wymówki w dół."],
+  ["💥", "Bomb session!", "To uczucie gdy bolą mięśnie których istnienia wcześniej nie byliście świadomi."],
+  ["🌟", "Gwiazdy!", "Plan > motywacja. Dziś plan wygrał. Jak zwykle."],
+  ["🧠", "Mózg vs ciało!", "Ciało mówiło 'nie damy rady'. Skończyliście. Ciało przeprasza."],
+  ["😤", "Poważna sprawa!", "Miny poważne, ciężary w górę, siłownia się boi."],
+  ["🍕", "Zasłużona pizza!", "Kalorie z treningu wróciły, żeby zaprosić znajomych. Możecie. Naprawdę."],
+  ["🐻", "Niedźwiedzie moce!", "Gdzieś na świecie niedźwiedź kiwa z uznaniem głową."],
+  ["👀", "Wszyscy patrzą!", "Nie, serio — ktoś na siłowni na was patrzył z zazdrością. Może."],
+  ["🎪", "Cyrk?", "Nie, to tylko Fińciu i Śruba wyrabiające normę tygodniową jak maszyny."],
+  ["🧲", "Przyciąganie masy!", "Fizycy twierdzą że duże masy przyciągają. Pracujecie nad dowodem."],
+  ["🦾", "Upgrade zainstalowany!", "Organizm właśnie pobrał aktualizację. Wersja dziś wieczór > wersja z rana."],
+  ["😴", "Sen zasłużony!", "Dobry trening = sen jak kamień. Poduszka już czeka."],
+  ["📈", "Trend wzrostowy!", "Dane nie kłamią. Kierunek: w górę. Tempo: systematyczne. Wynik: nieuchronny."],
+  ["🎲", "Losowy komunikat!", "Ten komunikat jest losowy. Trening już nie był — był zaplanowany i wykonany."],
+  ["🫡", "Meldunek!", "Trening wykonany, serie zaliczone, plan respektowany. Spocznij."],
 ];
 
 function isExDone(ex, e) {
@@ -536,7 +548,12 @@ function showCongratsOverlay(emoji, title, sub, upgrades, isWeek, durationSec) {
   document.getElementById('congratsEmoji').textContent = emoji;
   document.getElementById('congratsTitle').textContent = title;
   document.getElementById('congratsSub').textContent = sub;
-  const totalSeries = EX.reduce((a,e) => a + e.sets, 0);
+  const dl2 = ST?.[person]?.[week]?.[day] || {};
+  const totalSeries = EX.reduce((acc, ex) => {
+    const e = dl2[ex.id];
+    if (!e || !e.series) return acc;
+    return acc + e.series.filter(s => s.done || (s.kg != null && s.reps != null)).length;
+  }, 0);
   const timeStr = durationSec != null ? formatTime(durationSec) : null;
   document.getElementById('congratsStats').innerHTML = `
     ${timeStr ? `<div class="cstat"><div class="cstat-val" style="font-size:16px">${timeStr}</div><div class="cstat-lbl">czas</div></div>` : ''}
@@ -602,11 +619,11 @@ function renderTL(){
     pill.className='wk-pill'+(w===week?' active':'');
     pill.onclick=()=>setWeek(w);
     const dots=[0,1,2].map(d=>{
-      const isDone=isDayComplete(person,w,d);
+      const isCompleted=!!(ST._completed&&ST._completed[`${person}-${w}-${d}`]);
       const isCur=w===week&&d===day;
       const dl=ST?.[person]?.[w]?.[d];
-      const hasAny=dl&&Object.values(dl).some(e=>e.series&&e.series.some(s=>s.kg!=null));
-      return `<div class="wk-dot${isDone?' day-done':hasAny?' done':''}${isCur?' cur':''}"></div>`;
+      const hasAny=dl&&Object.values(dl).some(e=>e.series&&e.series.some(s=>s.kg!=null||s.done));
+      return `<div class="wk-dot${isCompleted?' day-done':hasAny?' done':''}${isCur?' cur':''}"></div>`;
     }).join('');
     const wDone=isWeekComplete(person,w);
     if(wDone)pill.classList.add('week-done');
