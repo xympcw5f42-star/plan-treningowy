@@ -207,6 +207,31 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-s
 .congrats-btn:active{transform:scale(.98);}
 
 /* PR CONGRATS */
+/* STATS */
+.stats-week-card{background:var(--s1);border-radius:var(--r);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;}
+.stats-week-head{padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+.stats-week-label{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--muted);}
+.stats-week-label.done{color:var(--lime);}
+.stats-week-badge{font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--lime-bg2);color:var(--lime);}
+.stats-week-body{display:none;border-top:1px solid var(--border);}
+.stats-week-body.open{display:block;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.stats-cell{background:var(--s1);padding:13px 14px;}
+.stats-cell-val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:500;color:var(--lime);}
+.stats-cell-val.secondary{color:var(--blue);}
+.stats-cell-val.tertiary{color:var(--orange);}
+.stats-cell-lbl{font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.07em;}
+.stats-day-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--border);font-size:12px;}
+.stats-day-name{color:var(--muted);font-weight:500;}
+.stats-day-vals{display:flex;gap:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);}
+.stats-day-time{color:var(--orange);}
+.stats-empty{text-align:center;padding:48px 24px;color:var(--muted);font-size:13px;line-height:1.7;}
+.stats-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.stats-sum-card{background:var(--s1);border-radius:var(--r);border:1px solid var(--border);padding:14px;}
+.stats-sum-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;color:var(--lime);}
+.stats-sum-lbl{font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.07em;}
+.stats-header{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 0 10px;}
+
 .pr-congrats{background:var(--purple-bg);border:1px solid rgba(176,126,240,.25);border-radius:var(--rsm);padding:10px 14px;margin-top:10px;display:none;text-align:center;}
 .pr-congrats.show{display:block;}
 .pr-congrats-text{font-size:13px;color:var(--purple);font-weight:600;}
@@ -229,6 +254,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-s
 <div class="nav-tabs">
   <button class="nav-tab active" onclick="setMainTab('workout',this)">Trening</button>
   <button class="nav-tab" onclick="setMainTab('pr',this)">Rekordy PR</button>
+  <button class="nav-tab" onclick="setMainTab('stats',this)">Statystyki</button>
 </div>
 
 <!-- WORKOUT TAB -->
@@ -266,6 +292,9 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-s
 <!-- PR TAB -->
 <div id="prTab" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:12px 16px 32px;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
   <div id="prList"></div>
+</div>
+<div id="statsTab" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:12px 16px 32px;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+  <div id="statsList"></div>
 </div>
 
 <!-- REST TIMER TOAST -->
@@ -417,7 +446,9 @@ function setMainTab(tab,el){
   el.classList.add('active');
   document.getElementById('workoutTab').style.display=tab==='workout'?'flex':'none';
   document.getElementById('prTab').style.display=tab==='pr'?'flex':'none';
+  document.getElementById('statsTab').style.display=tab==='stats'?'flex':'none';
   if(tab==='pr')renderPR();
+  if(tab==='stats')renderStats();
 }
 
 function setPerson(p,el){
@@ -427,6 +458,7 @@ function setPerson(p,el){
   openCards={};
   render();
   if(mainTab==='pr')renderPR();
+  if(mainTab==='stats')renderStats();
 }
 
 function setWeek(w){
@@ -552,6 +584,8 @@ function finishWorkout(){
   timerStart=null;
   if(!ST._completed)ST._completed={};
   ST._completed[`${person}-${week}-${day}`]=true;
+  if(!ST._durations)ST._durations={};
+  ST._durations[`${person}-${week}-${day}`]=totalSec;
   save();
   const dl=ST?.[person]?.[week]?.[day]||{};
   const upgrades=Object.values(dl).filter(e=>e.upgraded).length;
@@ -762,6 +796,124 @@ function renderPR(){
         </div>
       </div>`;
   });
+  list.innerHTML=html;
+}
+
+// ── STATS ────────────────────────────────────────────────────────────────────
+function calcWeekStats(p, w) {
+  let totalKg=0, totalSeries=0, totalSec=0, daysLogged=0;
+  for(let d=0;d<3;d++){
+    const dl=ST?.[p]?.[w]?.[d]||{};
+    let daySeries=0, dayKg=0;
+    EX.forEach(ex=>{
+      const e=dl[ex.id];
+      if(!e||!e.series)return;
+      e.series.forEach(s=>{
+        if(s.done||(s.kg!=null&&s.reps!=null)){
+          daySeries++;
+          if(s.kg&&s.reps){dayKg+=s.kg*s.reps;}
+        }
+      });
+    });
+    const dur=ST._durations?.[`${p}-${w}-${d}`]||0;
+    if(daySeries>0){daysLogged++;totalSeries+=daySeries;totalKg+=dayKg;totalSec+=dur;}
+  }
+  return{totalKg:Math.round(totalKg),totalSeries,totalSec,daysLogged};
+}
+
+let openStatsWeeks={};
+function toggleStatsWeek(w){
+  openStatsWeeks[w]=!openStatsWeeks[w];
+  const body=document.getElementById('swb-'+w);
+  if(body)body.classList.toggle('open',!!openStatsWeeks[w]);
+}
+
+function renderStats(){
+  const list=document.getElementById('statsList');
+  if(!list)return;
+
+  // Overall totals across all weeks
+  let grandKg=0,grandSeries=0,grandSec=0,grandDays=0;
+  for(let w=1;w<=8;w++){
+    const s=calcWeekStats(person,w);
+    grandKg+=s.totalKg; grandSeries+=s.totalSeries; grandSec+=s.totalSec; grandDays+=s.daysLogged;
+  }
+
+  const hasAny=grandSeries>0;
+
+  let html=`<div class="stats-header">${person==='A'?'Fińciu':'Śruba'} — podsumowanie</div>`;
+
+  if(!hasAny){
+    html+=`<div class="stats-empty">Brak danych.<br>Zacznijcie trenować żeby zobaczyć statystyki 💪</div>`;
+    list.innerHTML=html;return;
+  }
+
+  // Summary cards
+  html+=`<div class="stats-summary">
+    <div class="stats-sum-card"><div class="stats-sum-val">${grandKg.toLocaleString('pl')}</div><div class="stats-sum-lbl">kg łącznie</div></div>
+    <div class="stats-sum-card"><div class="stats-sum-val">${grandSeries}</div><div class="stats-sum-lbl">serii łącznie</div></div>
+    <div class="stats-sum-card"><div class="stats-sum-val">${grandDays}</div><div class="stats-sum-lbl">dni treningowych</div></div>
+    <div class="stats-sum-card"><div class="stats-sum-val">${grandSec>0?formatTime(grandSec):'—'}</div><div class="stats-sum-lbl">czas łącznie</div></div>
+  </div>`;
+
+  html+=`<div class="stats-header" style="margin-top:4px">Tygodnie</div>`;
+
+  for(let w=1;w<=8;w++){
+    const s=calcWeekStats(person,w);
+    const isDone=isWeekComplete(person,w);
+    const isOpen=!!openStatsWeeks[w];
+    if(s.totalSeries===0&&!isDone){
+      html+=`<div class="stats-week-card">
+        <div class="stats-week-head" style="cursor:default">
+          <span class="stats-week-label">Tydzień ${w}</span>
+          <span style="font-size:11px;color:var(--dim)">brak danych</span>
+        </div>
+      </div>`;
+      continue;
+    }
+    // Per-day breakdown
+    let dayRows='';
+    for(let d=0;d<3;d++){
+      const dl=ST?.[person]?.[w]?.[d]||{};
+      let daySeries=0,dayKg=0;
+      EX.forEach(ex=>{
+        const e=dl[ex.id];
+        if(!e||!e.series)return;
+        e.series.forEach(s=>{
+          if(s.done||(s.kg!=null&&s.reps!=null)){daySeries++;if(s.kg&&s.reps)dayKg+=s.kg*s.reps;}
+        });
+      });
+      const dur=ST._durations?.[`${person}-${w}-${d}`]||0;
+      const completed=!!(ST._completed&&ST._completed[`${person}-${w}-${d}`]);
+      if(daySeries===0&&!completed)continue;
+      dayRows+=`<div class="stats-day-row">
+        <span class="stats-day-name">${DAYS[d]}</span>
+        <div class="stats-day-vals">
+          <span>${Math.round(dayKg).toLocaleString('pl')} kg</span>
+          <span>${daySeries} serii</span>
+          ${dur>0?`<span class="stats-day-time">${formatTime(dur)}</span>`:''}
+        </div>
+      </div>`;
+    }
+    html+=`<div class="stats-week-card">
+      <div class="stats-week-head" onclick="toggleStatsWeek(${w})">
+        <span class="stats-week-label${isDone?' done':''}">Tydzień ${w}${isDone?' ✓':''}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)">${Math.round(s.totalKg).toLocaleString('pl')} kg · ${s.totalSeries} serii${s.totalSec>0?' · '+formatTime(s.totalSec):''}</span>
+          <span style="font-size:12px;color:var(--dim)">${isOpen?'▲':'▼'}</span>
+        </div>
+      </div>
+      <div class="stats-week-body${isOpen?' open':''}" id="swb-${w}">
+        <div class="stats-grid">
+          <div class="stats-cell"><div class="stats-cell-val">${Math.round(s.totalKg).toLocaleString('pl')}</div><div class="stats-cell-lbl">kg podniesiono</div></div>
+          <div class="stats-cell"><div class="stats-cell-val secondary">${s.totalSeries}</div><div class="stats-cell-lbl">serii</div></div>
+          <div class="stats-cell"><div class="stats-cell-val tertiary">${s.totalSec>0?formatTime(s.totalSec):'—'}</div><div class="stats-cell-lbl">czas na siłowni</div></div>
+          <div class="stats-cell"><div class="stats-cell-val">${s.daysLogged}/3</div><div class="stats-cell-lbl">dni</div></div>
+        </div>
+        ${dayRows}
+      </div>
+    </div>`;
+  }
   list.innerHTML=html;
 }
 
