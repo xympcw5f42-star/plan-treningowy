@@ -150,6 +150,23 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-s
 .sum-item+.sum-item{border-left:1px solid var(--border);}
 .sum-val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:500;color:var(--lime);}
 .sum-lbl{font-size:10px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.07em;}
+/* TIMER BAR */
+.timer-bar{display:none;padding:10px 16px 0;flex-shrink:0;}
+.timer-bar.show{display:block;}
+.timer-inner{background:var(--s2);border:1px solid rgba(206,240,78,.25);border-radius:var(--r);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.timer-left{display:flex;align-items:center;gap:10px;}
+.timer-dot{width:8px;height:8px;border-radius:50%;background:var(--lime);animation:pulse 1.2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.8);}}
+.timer-time{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;color:var(--lime);letter-spacing:.05em;}
+.timer-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:1px;}
+.finish-btn{background:var(--lime);border:none;border-radius:var(--rsm);color:#111;font-size:12px;font-weight:700;padding:9px 16px;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:.04em;white-space:nowrap;flex-shrink:0;}
+.finish-btn:active{transform:scale(.97);}
+
+/* START BUTTON */
+.start-wrap{padding:10px 16px 0;flex-shrink:0;}
+.start-btn{width:100%;padding:13px;background:var(--lime-bg2);border:1px solid rgba(206,240,78,.3);border-radius:var(--r);color:var(--lime);font-size:14px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:.06em;transition:all .15s;}
+.start-btn:active{background:rgba(206,240,78,.22);transform:scale(.99);}
+
 </style>
 </head>
 <body>
@@ -170,6 +187,21 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-s
   <button class="dtab" onclick="setDay(2,this)">Niedziela</button>
 </div>
 
+<div class="start-wrap" id="startWrap">
+  <button class="start-btn" onclick="startWorkout()">▶ Zacznij trening</button>
+</div>
+<div class="timer-bar" id="timerBar">
+  <div class="timer-inner">
+    <div class="timer-left">
+      <div class="timer-dot"></div>
+      <div>
+        <div class="timer-time" id="timerDisplay">00:00</div>
+        <div class="timer-label">czas treningu</div>
+      </div>
+    </div>
+    <button class="finish-btn" onclick="finishWorkout()">Zakończ trening ✓</button>
+  </div>
+</div>
 <div class="status-row" id="statusRow"></div>
 <div class="confirm-bar" id="confirmBar">
   <span class="confirm-text">Zresetować ten dzień treningowy?</span>
@@ -254,11 +286,23 @@ function setPerson(p,el){
   openCards={};
   render();
 }
-function setWeek(w){week=w;openCards={};render();}
+function setWeek(w){
+  week=w;openCards={};
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;timerStart=null;timerElapsed=0;
+    document.getElementById('timerBar').classList.remove('show');
+    document.getElementById('startWrap').style.display='';
+  }
+  render();
+}
 function setDay(d,el){
   day=d;openCards={};
   document.querySelectorAll('.dtab').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
+  // stop timer if running when switching days
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;timerStart=null;timerElapsed=0;
+    document.getElementById('timerBar').classList.remove('show');
+    document.getElementById('startWrap').style.display='';
+  }
   render();
 }
 function toggleCard(id){
@@ -285,7 +329,6 @@ function toggleSerDone(exId, sIdx){
   if(btn){btn.classList.toggle('done',e.series[sIdx].done); btn.textContent=e.series[sIdx].done?'✓':'○';}
   if(row)row.classList.toggle('done',e.series[sIdx].done);
   updateCardState(exId);
-  setTimeout(checkDayCompletion, 200);
 }
 
 function recalcOverload(exId){
@@ -370,8 +413,6 @@ function updateCardState(exId){
       kgEl.className='ex-kg';
     }
   }
-  // check if whole day is now complete
-  setTimeout(checkDayCompletion, 200);
 }
 
 
@@ -387,21 +428,20 @@ const CONGRATS_MSGS = [
   ["🌟", "Gwiazdy!", "Taki trening to inwestycja w siebie. Zwraca się z odsetkami."],
 ];
 
-function isSeriesDone(s) {
-  // A series counts as done if explicitly ticked OR has both kg and reps entered
-  return s.done || (s.kg != null && s.reps != null);
+function isExDone(ex, e) {
+  if (!e || !e.series) return false;
+  if (ex.step === null) {
+    // brzuch: at least one set ticked
+    return e.series.some(s => s.done);
+  }
+  // others: at least one series with kg+reps, OR at least one ticked
+  return e.series.some(s => s.done || (s.kg != null && s.reps != null));
 }
 
 function isDayComplete(p, w, d) {
   return EX.every(ex => {
     const e = ST?.[p]?.[w]?.[d]?.[ex.id];
-    if (!e) return false;
-    if (ex.step === null) {
-      // brzuch — all sets ticked
-      return e.series && e.series.every(s => s.done);
-    }
-    // others — every series either ticked or has kg+reps
-    return e.series && e.series.every(s => isSeriesDone(s));
+    return isExDone(ex, e);
   });
 }
 
@@ -409,16 +449,54 @@ function isWeekComplete(p, w) {
   return [0,1,2].every(d => isDayComplete(p, w, d));
 }
 
-function checkDayCompletion() {
-  if (!isDayComplete(person, week, day)) return;
-  // Mark in state so it persists
+// Timer state
+let timerStart = null;
+let timerInterval = null;
+let timerElapsed = 0; // seconds accumulated before pause
+
+function formatTime(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function updateTimerDisplay() {
+  const elapsed = timerElapsed + Math.floor((Date.now() - timerStart) / 1000);
+  document.getElementById('timerDisplay').textContent = formatTime(elapsed);
+}
+
+function startWorkout() {
+  timerStart = Date.now();
+  timerElapsed = 0;
+  timerInterval = setInterval(updateTimerDisplay, 1000);
+  document.getElementById('startWrap').style.display = 'none';
+  document.getElementById('timerBar').classList.add('show');
+}
+
+function finishWorkout() {
+  // Stop timer
+  clearInterval(timerInterval);
+  const totalSec = timerElapsed + (timerStart ? Math.floor((Date.now() - timerStart) / 1000) : 0);
+  timerStart = null;
+
+  // Mark day complete
   if (!ST._completed) ST._completed = {};
   const key = `${person}-${week}-${day}`;
-  if (ST._completed[key]) return; // already shown
   ST._completed[key] = true;
   save();
-  showCongratsOverlay();
-  renderTL(); // update dots immediately
+
+  // Count upgrades
+  const dl = ST?.[person]?.[week]?.[day] || {};
+  const upgrades = Object.values(dl).filter(e => e.upgraded).length;
+
+  // Reset timer UI so it shows start button again next time
+  document.getElementById('timerBar').classList.remove('show');
+  document.getElementById('startWrap').style.display = '';
+
+  renderTL();
+  showCongratsOverlay(null, null, null, upgrades, false, totalSec);
 }
 
 const WEEK_CONGRATS = [
@@ -447,8 +525,7 @@ function checkWeekCompletion() {
   showCongratsOverlay(emoji, `Tydzień ${week} skończony!`, title + ' ' + sub, upgrades, true);
 }
 
-function showCongratsOverlay(emoji, title, sub, upgrades, isWeek) {
-  // If called without args — day completion
+function showCongratsOverlay(emoji, title, sub, upgrades, isWeek, durationSec) {
   if (!emoji) {
     const msg = CONGRATS_MSGS[Math.floor(Math.random() * CONGRATS_MSGS.length)];
     emoji = msg[0]; title = msg[1]; sub = msg[2];
@@ -459,9 +536,10 @@ function showCongratsOverlay(emoji, title, sub, upgrades, isWeek) {
   document.getElementById('congratsEmoji').textContent = emoji;
   document.getElementById('congratsTitle').textContent = title;
   document.getElementById('congratsSub').textContent = sub;
-  const dl = ST?.[person]?.[week]?.[day] || {};
   const totalSeries = EX.reduce((a,e) => a + e.sets, 0);
+  const timeStr = durationSec != null ? formatTime(durationSec) : null;
   document.getElementById('congratsStats').innerHTML = `
+    ${timeStr ? `<div class="cstat"><div class="cstat-val" style="font-size:16px">${timeStr}</div><div class="cstat-lbl">czas</div></div>` : ''}
     <div class="cstat"><div class="cstat-val">${totalSeries}</div><div class="cstat-lbl">serii</div></div>
     <div class="cstat"><div class="cstat-val">${upgrades}</div><div class="cstat-lbl">awansów</div></div>
     <div class="cstat"><div class="cstat-val">${isWeek ? week : day+1}/3</div><div class="cstat-lbl">${isWeek ? 'tygodni' : 'dni'}</div></div>
@@ -471,7 +549,6 @@ function showCongratsOverlay(emoji, title, sub, upgrades, isWeek) {
 
 function closeCongratsOverlay() {
   document.getElementById('congratsOverlay').classList.remove('show');
-  // check if whole week is done now
   setTimeout(checkWeekCompletion, 400);
 }
 
@@ -488,21 +565,34 @@ function hideConfirm(){
   document.getElementById('confirmBar').classList.remove('show');
 }
 function confirmReset(){
-  // Delete all data for current person/week/day
   if(ST[person]&&ST[person][week]&&ST[person][week][day]){
     delete ST[person][week][day];
   }
-  // Remove completed flag for this day
-  if(ST._completed){
-    delete ST._completed[`${person}-${week}-${day}`];
+  if(ST._completed) delete ST._completed[`${person}-${week}-${day}`];
+  // stop timer if running
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;timerStart=null;timerElapsed=0;
+    document.getElementById('timerBar').classList.remove('show');
   }
   save();
   hideConfirm();
   openCards={};
+  document.getElementById('startWrap').style.display='';
   render();
 }
 
-function render(){renderTL();renderDayTabs();renderStatus();renderAll();}
+function render(){
+  renderTL();renderDayTabs();renderStatus();renderAll();
+  // show/hide start button based on completion
+  const completed=ST._completed&&ST._completed[`${person}-${week}-${day}`];
+  const startWrap=document.getElementById('startWrap');
+  const timerBarEl=document.getElementById('timerBar');
+  if(completed&&!timerInterval){
+    startWrap.style.display='none';
+    if(!timerBarEl.classList.contains('show')) startWrap.style.display='none';
+  } else if(!timerInterval){
+    startWrap.style.display='';
+  }
+}
 
 function renderTL(){
   const tl=document.getElementById('tl');
