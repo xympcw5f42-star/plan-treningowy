@@ -39,6 +39,32 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-s
 .wk-dot{width:5px;height:5px;border-radius:50%;background:var(--dim);}
 .wk-dot.done{background:var(--lime2);}
 .wk-dot.cur{background:var(--lime);}
+.wk-dot.day-done{background:var(--lime);}
+.wk-pill.week-done{background:var(--lime-bg2);border-color:rgba(206,240,78,.5);}
+.wk-pill.week-done .wk-num{color:var(--lime);}
+
+/* CONGRATS OVERLAY */
+.congrats-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:100;padding:24px;opacity:0;pointer-events:none;transition:opacity .3s;}
+.congrats-overlay.show{opacity:1;pointer-events:all;}
+.congrats-box{background:var(--s1);border:1px solid rgba(206,240,78,.35);border-radius:20px;padding:32px 24px;max-width:340px;width:100%;text-align:center;}
+.congrats-emoji{font-size:52px;margin-bottom:16px;display:block;}
+.congrats-title{font-size:22px;font-weight:700;color:var(--lime);margin-bottom:8px;letter-spacing:-.01em;}
+.congrats-sub{font-size:14px;color:var(--muted);line-height:1.65;margin-bottom:20px;}
+.congrats-stats{display:flex;gap:0;background:var(--s2);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.cstat{flex:1;padding:12px 8px;text-align:center;}
+.cstat+.cstat{border-left:1px solid var(--border);}
+.cstat-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;color:var(--lime);}
+.cstat-lbl{font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.07em;}
+.congrats-btn{width:100%;padding:13px;background:var(--lime);border:none;border-radius:12px;color:#111;font-size:14px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:.04em;}
+.congrats-btn:active{transform:scale(.98);}
+.reset-btn{background:transparent;border:1px solid var(--border2);border-radius:20px;color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;padding:3px 10px;cursor:pointer;transition:all .15s;letter-spacing:.04em;}
+.reset-btn:active{background:var(--red-bg);border-color:rgba(240,90,90,.4);color:var(--red);}
+
+.confirm-bar{display:none;background:var(--red-bg);border:1px solid rgba(240,90,90,.25);border-radius:var(--rsm);padding:10px 14px;margin:8px 16px 0;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;}
+.confirm-bar.show{display:flex;}
+.confirm-text{font-size:12px;color:var(--red);flex:1;}
+.confirm-yes{background:var(--red);border:none;border-radius:var(--rsm);color:#fff;font-size:12px;font-weight:600;padding:6px 14px;cursor:pointer;font-family:'Syne',sans-serif;}
+.confirm-no{background:transparent;border:1px solid var(--border2);border-radius:var(--rsm);color:var(--muted);font-size:12px;padding:6px 14px;cursor:pointer;font-family:'Syne',sans-serif;}
 
 /* DAY TABS */
 .daytabs{display:flex;gap:6px;padding:10px 16px 0;flex-shrink:0;}
@@ -131,8 +157,8 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-s
 <div class="topbar">
   <div class="app-name">Gym Tracker</div>
   <div class="person-switch">
-    <button class="psw active" onclick="setPerson('A',this)">Osoba A</button>
-    <button class="psw" onclick="setPerson('B',this)">Osoba B</button>
+    <button class="psw active" onclick="setPerson('A',this)">Fińciu</button>
+    <button class="psw" onclick="setPerson('B',this)">Śruba</button>
   </div>
 </div>
 
@@ -145,6 +171,11 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-s
 </div>
 
 <div class="status-row" id="statusRow"></div>
+<div class="confirm-bar" id="confirmBar">
+  <span class="confirm-text">Zresetować ten dzień treningowy?</span>
+  <button class="confirm-no" onclick="hideConfirm()">Nie</button>
+  <button class="confirm-yes" onclick="confirmReset()">Resetuj</button>
+</div>
 <div class="scroll-area" id="scrollArea"></div>
 
 <script>
@@ -189,6 +220,7 @@ function ep(p,w,d,id){
 // Find most recent nextWeight for this person+exercise before current session
 function resolvedWeight(ex,p,tw,td){
   if(ex.step===null)return null;
+  // Search backwards through all sessions BEFORE the current one
   for(let w=tw;w>=1;w--){
     const dStart=(w===tw)?td-1:2;
     for(let d=dStart;d>=0;d--){
@@ -197,6 +229,19 @@ function resolvedWeight(ex,p,tw,td){
     }
   }
   return p==='A'?ex.sA:ex.sB;
+}
+
+// Weight to DISPLAY for current session — uses own logged kg if already entered,
+// otherwise looks at previous sessions' nextWeight
+function displayWeight(ex,p,w,d){
+  if(ex.step===null)return null;
+  const e=ST?.[p]?.[w]?.[d]?.[ex.id];
+  // If this session has any series with kg entered, use max of those
+  if(e&&e.series){
+    const filled=e.series.filter(s=>s.kg!=null);
+    if(filled.length>0)return Math.max(...filled.map(s=>s.kg));
+  }
+  return resolvedWeight(ex,p,w,d);
 }
 
 let person='A', week=1, day=0, openCards={};
@@ -240,6 +285,7 @@ function toggleSerDone(exId, sIdx){
   if(btn){btn.classList.toggle('done',e.series[sIdx].done); btn.textContent=e.series[sIdx].done?'✓':'○';}
   if(row)row.classList.toggle('done',e.series[sIdx].done);
   updateCardState(exId);
+  setTimeout(checkDayCompletion, 200);
 }
 
 function recalcOverload(exId){
@@ -309,15 +355,153 @@ function updateCardState(exId){
   card.classList.toggle('logged',hasData&&!e.upgraded);
   const dot=card.querySelector('.ex-dot');
   if(dot){dot.className='ex-dot'+(e.upgraded?' upgraded':hasData?' logged':'');}
-  // update displayed kg
+  // update displayed kg in card header
   const kgEl=card.querySelector('.ex-kg');
-  if(kgEl&&e.nextWeight!=null&&e.upgraded){
-    kgEl.innerHTML=`${e.nextWeight}<small> kg</small>`;
-    kgEl.classList.add('up');
+  if(kgEl){
+    const ex2=EX.find(ex=>ex.id===exId);
+    if(e.upgraded&&e.nextWeight!=null){
+      kgEl.innerHTML=`${e.nextWeight}<small> kg</small>`;
+      kgEl.className='ex-kg up';
+    } else {
+      // show current session weight or plan weight
+      const dw=displayWeight(ex2,person,week,day);
+      const bw=resolvedWeight(ex2,person,week,day);
+      kgEl.innerHTML=`${dw||bw}<small> kg</small>`;
+      kgEl.className='ex-kg';
+    }
   }
+  // check if whole day is now complete
+  setTimeout(checkDayCompletion, 200);
+}
+
+
+// ── COMPLETION HELPERS ────────────────────────────────────────────────────
+const CONGRATS_MSGS = [
+  ["🔥", "Płonie!", "Seria za serią, kg za kg. Macie to w małym palcu."],
+  ["💪", "Solidna robota!", "Każdy trening to cegiełka. Dziś cegła ułożona."],
+  ["⚡", "Błyskawica!", "Szybko, sprawnie, bez wymówek. Tak się robi."],
+  ["🏆", "Mistrzowie!", "Plan wykonany w 100%. Jutro odpoczynek zasłużony."],
+  ["🚀", "Na orbicie!", "Trening zrobiony. Postęp nie czeka na leniuchów."],
+  ["🎯", "W punkt!", "Wszystkie ćwiczenia odhaczone. Plan respektowany."],
+  ["💥", "Bomb session!", "Czuć zmęczenie? Dobrze. To znaczy że się stara."],
+  ["🌟", "Gwiazdy!", "Taki trening to inwestycja w siebie. Zwraca się z odsetkami."],
+];
+
+function isSeriesDone(s) {
+  // A series counts as done if explicitly ticked OR has both kg and reps entered
+  return s.done || (s.kg != null && s.reps != null);
+}
+
+function isDayComplete(p, w, d) {
+  return EX.every(ex => {
+    const e = ST?.[p]?.[w]?.[d]?.[ex.id];
+    if (!e) return false;
+    if (ex.step === null) {
+      // brzuch — all sets ticked
+      return e.series && e.series.every(s => s.done);
+    }
+    // others — every series either ticked or has kg+reps
+    return e.series && e.series.every(s => isSeriesDone(s));
+  });
+}
+
+function isWeekComplete(p, w) {
+  return [0,1,2].every(d => isDayComplete(p, w, d));
+}
+
+function checkDayCompletion() {
+  if (!isDayComplete(person, week, day)) return;
+  // Mark in state so it persists
+  if (!ST._completed) ST._completed = {};
+  const key = `${person}-${week}-${day}`;
+  if (ST._completed[key]) return; // already shown
+  ST._completed[key] = true;
+  save();
+  showCongratsOverlay();
+  renderTL(); // update dots immediately
+}
+
+const WEEK_CONGRATS = [
+  ["🏅", "Tydzień 1 zaliczony!", "Pierwszy tydzień za wami. Fundament jest. Czas budować."],
+  ["⚡", "Tydzień 2 z głowy!", "Forma rośnie. Ciało się adaptuje. Idźcie dalej."],
+  ["🔥", "Połowa drogi!", "3 tygodnie ciągłości — to już nie przypadek, to nawyk."],
+  ["💎", "Czwarty tydzień!", "Miesiąc systematycznej pracy. Nie każdy to potrafi."],
+  ["🚀", "Piąty tydzień!", "Ponad połowa za wami. Wyniki mówią same za siebie."],
+  ["🌟", "Szósty tydzień!", "Dwa tygodnie do końca bloku. Dajcie z siebie wszystko."],
+  ["🏆", "Siódmy tydzień!", "Przedostatni. Jutro możecie patrzeć wstecz z dumą."],
+  ["🎉", "8 TYGODNI DONE!", "Cały blok ukończony. Czas na deload i nowy plan!"],
+];
+
+function checkWeekCompletion() {
+  if (!isWeekComplete(person, week)) return;
+  if (!ST._completedWeeks) ST._completedWeeks = {};
+  const key = `${person}-${week}`;
+  if (ST._completedWeeks[key]) return;
+  ST._completedWeeks[key] = true;
+  save();
+  const [emoji, title, sub] = WEEK_CONGRATS[week - 1];
+  const upgrades = [0,1,2].reduce((acc, d) => {
+    const dl = ST?.[person]?.[week]?.[d] || {};
+    return acc + Object.values(dl).filter(e => e.upgraded).length;
+  }, 0);
+  showCongratsOverlay(emoji, `Tydzień ${week} skończony!`, title + ' ' + sub, upgrades, true);
+}
+
+function showCongratsOverlay(emoji, title, sub, upgrades, isWeek) {
+  // If called without args — day completion
+  if (!emoji) {
+    const msg = CONGRATS_MSGS[Math.floor(Math.random() * CONGRATS_MSGS.length)];
+    emoji = msg[0]; title = msg[1]; sub = msg[2];
+    const dl = ST?.[person]?.[week]?.[day] || {};
+    upgrades = Object.values(dl).filter(e => e.upgraded).length;
+    isWeek = false;
+  }
+  document.getElementById('congratsEmoji').textContent = emoji;
+  document.getElementById('congratsTitle').textContent = title;
+  document.getElementById('congratsSub').textContent = sub;
+  const dl = ST?.[person]?.[week]?.[day] || {};
+  const totalSeries = EX.reduce((a,e) => a + e.sets, 0);
+  document.getElementById('congratsStats').innerHTML = `
+    <div class="cstat"><div class="cstat-val">${totalSeries}</div><div class="cstat-lbl">serii</div></div>
+    <div class="cstat"><div class="cstat-val">${upgrades}</div><div class="cstat-lbl">awansów</div></div>
+    <div class="cstat"><div class="cstat-val">${isWeek ? week : day+1}/3</div><div class="cstat-lbl">${isWeek ? 'tygodni' : 'dni'}</div></div>
+  `;
+  document.getElementById('congratsOverlay').classList.add('show');
+}
+
+function closeCongratsOverlay() {
+  document.getElementById('congratsOverlay').classList.remove('show');
+  // check if whole week is done now
+  setTimeout(checkWeekCompletion, 400);
+}
+
+function closeCongratsOutside(e) {
+  if (e.target === document.getElementById('congratsOverlay')) closeCongratsOverlay();
 }
 
 // ── RENDER ──────────────────────────────────────────────────────────────────
+function showConfirm(){
+  document.getElementById('confirmBar').classList.add('show');
+  document.getElementById('scrollArea').scrollTop=0;
+}
+function hideConfirm(){
+  document.getElementById('confirmBar').classList.remove('show');
+}
+function confirmReset(){
+  // Delete all data for current person/week/day
+  if(ST[person]&&ST[person][week]&&ST[person][week][day]){
+    delete ST[person][week][day];
+  }
+  // Remove completed flag for this day
+  if(ST._completed){
+    delete ST._completed[`${person}-${week}-${day}`];
+  }
+  save();
+  hideConfirm();
+  openCards={};
+  render();
+}
+
 function render(){renderTL();renderDayTabs();renderStatus();renderAll();}
 
 function renderTL(){
@@ -328,11 +512,14 @@ function renderTL(){
     pill.className='wk-pill'+(w===week?' active':'');
     pill.onclick=()=>setWeek(w);
     const dots=[0,1,2].map(d=>{
-      const dl=ST?.[person]?.[w]?.[d];
-      const has=dl&&Object.values(dl).some(e=>e.series&&e.series.some(s=>s.kg!=null));
+      const isDone=isDayComplete(person,w,d);
       const isCur=w===week&&d===day;
-      return `<div class="wk-dot${has?' done':''}${isCur?' cur':''}"></div>`;
+      const dl=ST?.[person]?.[w]?.[d];
+      const hasAny=dl&&Object.values(dl).some(e=>e.series&&e.series.some(s=>s.kg!=null));
+      return `<div class="wk-dot${isDone?' day-done':hasAny?' done':''}${isCur?' cur':''}"></div>`;
     }).join('');
+    const wDone=isWeekComplete(person,w);
+    if(wDone)pill.classList.add('week-done');
     pill.innerHTML=`<div class="wk-num">T${w}</div><div class="wk-dots">${dots}</div>`;
     tl.appendChild(pill);
   }
@@ -357,10 +544,12 @@ function renderStatus(){
   const dl=ST?.[person]?.[week]?.[day]||{};
   const logged=Object.values(dl).filter(e=>e.series&&e.series.some(s=>s.kg!=null)).length;
   const total=EX.filter(e=>e.step!==null).length;
+  const hasAnyData = Object.values(ST?.[person]?.[week]?.[day]||{}).some(e=>e.series&&e.series.some(s=>s.kg!=null||s.done));
   row.innerHTML=`
     <div class="chip chip-lime">${PHASES[week-1]} · T${week}</div>
     <div class="chip chip-muted">${DAYS[day]}</div>
     ${logged>0?`<div class="chip chip-orange">${logged}/${total} zapisanych</div>`:''}
+    ${hasAnyData?`<button class="reset-btn" onclick="showConfirm()">↺ resetuj</button>`:''}
   `;
 }
 
@@ -381,6 +570,7 @@ function renderAll(){
 
   EX.forEach((ex,idx)=>{
     const baseW=resolvedWeight(ex,person,week,day);
+    const dispW=displayWeight(ex,person,week,day);
     const e=ST?.[person]?.[week]?.[day]?.[ex.id];
     const hasData=e&&e.series&&e.series.some(s=>s.kg!=null||s.reps!=null);
     const isUpgraded=e&&e.upgraded;
@@ -393,8 +583,9 @@ function renderAll(){
 
     let kgHtml='';
     if(baseW!==null){
-      const dispW=(isUpgraded&&e.nextWeight)?e.nextWeight:baseW;
-      kgHtml=`<div class="ex-kg${isUpgraded?' up':''}">${dispW}<small> kg</small></div>`;
+      // Show nextWeight if upgraded, otherwise show current session weight (or plan weight)
+      const showW=(isUpgraded&&e&&e.nextWeight)?e.nextWeight:(dispW||baseW);
+      kgHtml=`<div class="ex-kg${isUpgraded?' up':''}">${showW}<small> kg</small></div>`;
     } else {
       kgHtml=`<div class="ex-kg" style="font-size:13px;color:var(--muted)">—</div>`;
     }
@@ -497,5 +688,15 @@ function renderAll(){
 
 render();
 </script>
+
+<div class="congrats-overlay" id="congratsOverlay" onclick="closeCongratsOutside(event)">
+  <div class="congrats-box" id="congratsBox">
+    <span class="congrats-emoji" id="congratsEmoji">💪</span>
+    <div class="congrats-title" id="congratsTitle">Trening zrobiony!</div>
+    <div class="congrats-sub" id="congratsSub">Dobra robota!</div>
+    <div class="congrats-stats" id="congratsStats"></div>
+    <button class="congrats-btn" onclick="closeCongratsOverlay()">Zamknij</button>
+  </div>
+</div>
 </body>
 </html>
