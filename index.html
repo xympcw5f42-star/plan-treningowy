@@ -152,6 +152,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-s
 .ol-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;}
 .up .ol-val{color:var(--lime);}.hold .ol-val{color:var(--blue);}.down .ol-val{color:var(--orange);}
 .ol-note{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;}
+
 .day-sum{background:var(--s1);border-radius:var(--r);border:1px solid var(--border);padding:13px;margin-bottom:9px;display:flex;}
 .sum-item{flex:1;text-align:center;}
 .sum-item+.sum-item{border-left:1px solid var(--border);}
@@ -399,6 +400,11 @@ function ep(p,w,d,id){
   return ST[p][w][d][id];
 }
 
+// Round to nearest 2.5 kg (1.25 kg plate per side = 2.5 kg total change)
+function roundToPlate(kg){
+  return Math.round(kg/2.5)*2.5;
+}
+
 function resolvedWeight(ex,p,tw,td){
   if(ex.step===null)return null;
   for(let w=tw;w>=1;w--){
@@ -583,13 +589,14 @@ function recalcOverload(exId){
   const maxKg=Math.max(...filledSeries.map(s=>s.kg));
   const minReps=Math.min(...filledSeries.map(s=>s.reps));
   const maxRange=ex.reps[1],minRange=ex.reps[0];
+  const step=ex.step||2.5;
   let nextW,upgraded,belowMin;
-  if(minReps>=maxRange){nextW=Math.round((maxKg+ex.step)*2)/2;upgraded=true;belowMin=false;}
-  else if(minReps<minRange){nextW=Math.round(maxKg*0.9*2)/2;upgraded=false;belowMin=true;}
+  if(minReps>=maxRange){nextW=roundToPlate(maxKg+step);upgraded=true;belowMin=false;}
+  else if(minReps<minRange){nextW=roundToPlate(maxKg*0.9);upgraded=false;belowMin=true;}
   else{nextW=maxKg;upgraded=false;belowMin=false;}
   e.nextWeight=nextW;e.upgraded=upgraded;e.belowMin=belowMin;
   save();
-  updateOverloadBox(exId,nextW,upgraded,belowMin,maxKg,minReps,maxRange,minRange,ex.step);
+  updateOverloadBox(exId,nextW,upgraded,belowMin,maxKg,minReps,maxRange,minRange,step);
   updateCardState(exId);
 }
 
@@ -603,34 +610,44 @@ function updateOverloadBox(exId,nextW,upgraded,belowMin,usedKg,minReps,maxRange,
   else{cls='hold';label='Następny trening';note=`Najsłabsza seria: ${minReps} powt. — zostań przy tym ciężarze aż do ${maxRange} powt.`;}
   box.className=`overload-box show ${cls}`;
   box.innerHTML=`<div class="ol-label">${label}</div><div class="ol-val">${nextW} kg</div><div class="ol-note">${note}</div>`;
+
 }
 
 function updateCardState(exId){
+  // Always re-read fresh from state
   const e=ST?.[person]?.[week]?.[day]?.[exId];
   const card=document.getElementById('card-'+exId);
-  if(!card||!e)return;
-  const hasData=e.series.some(s=>s.kg!=null||s.reps!=null);
-  card.classList.toggle('upgraded',!!e.upgraded);
-  card.classList.toggle('logged',hasData&&!e.upgraded);
+  const ex2=EX_ALL.find(ex=>ex.id===exId);
+  if(!card||!ex2)return;
+
+  const hasData=e&&e.series&&e.series.some(s=>s.kg!=null||s.reps!=null);
+  const isUpgraded=!!(e&&e.upgraded&&e.nextWeight!=null);
+
+  // Update card border
+  card.className='ex-card'+(isUpgraded?' upgraded':hasData?' logged':'');
+
+  // Update dot
   const dot=card.querySelector('.ex-dot');
-  if(dot)dot.className='ex-dot'+(e.upgraded?' upgraded':hasData?' logged':'');
-  const kgEl=document.getElementById('kg-'+exId)||card.querySelector('.ex-kg');
-  if(kgEl){
-    const ex2=EX_ALL.find(ex=>ex.id===exId);
-    if(!ex2||ex2.step===null)return;
-    if(e&&e.upgraded&&e.nextWeight!=null){
-      // Overload achieved — show next weight in orange
-      kgEl.innerHTML=`${e.nextWeight}<small> kg</small>`;
-      kgEl.className='ex-kg up';
-    } else {
-      // Show highest kg entered this session, or planned weight
-      const entered=e&&e.series?e.series.filter(s=>s.kg!=null):[];
-      const enteredMax=entered.length>0?Math.max(...entered.map(s=>s.kg)):null;
-      const planned=resolvedWeight(ex2,person,week,day);
-      const show=enteredMax!=null?enteredMax:planned;
-      if(show!=null)kgEl.innerHTML=`${show}<small> kg</small>`;
-      kgEl.className='ex-kg';
-    }
+  if(dot)dot.className='ex-dot'+(isUpgraded?' upgraded':hasData?' logged':'');
+
+  // Update kg display
+  const kgEl=document.getElementById('kg-'+exId);
+  if(!kgEl||ex2.step===null)return;
+
+  const planned=resolvedWeight(ex2,person,week,day);
+  if(isUpgraded){
+    // górny zakres — pokaż nowy wyższy ciężar na pomarańczowo
+    kgEl.innerHTML=`${e.nextWeight}<small> kg</small>`;
+    kgEl.className='ex-kg up';
+  } else if(e&&e.belowMin&&e.nextWeight!=null){
+    // za ciężko — pokaż zredukowany ciężar na pomarańczowo
+    kgEl.innerHTML=`${e.nextWeight}<small> kg</small>`;
+    kgEl.className='ex-kg up';
+  } else {
+    // w zakresie lub brak danych — pokaż planowany ciężar na zielono
+    const show=planned;
+    if(show!=null)kgEl.innerHTML=`${show}<small> kg</small>`;
+    kgEl.className='ex-kg';
   }
 }
 
