@@ -614,17 +614,20 @@ function updateCardState(exId){
   card.classList.toggle('logged',hasData&&!e.upgraded);
   const dot=card.querySelector('.ex-dot');
   if(dot)dot.className='ex-dot'+(e.upgraded?' upgraded':hasData?' logged':'');
-  const kgEl=card.querySelector('.ex-kg');
+  const kgEl=document.getElementById('kg-'+exId)||card.querySelector('.ex-kg');
   if(kgEl){
     const ex2=EX_ALL.find(ex=>ex.id===exId);
-    if(!ex2)return;
+    if(!ex2||ex2.step===null)return;
     if(e&&e.upgraded&&e.nextWeight!=null){
+      // Overload achieved — show next weight in orange
       kgEl.innerHTML=`${e.nextWeight}<small> kg</small>`;
       kgEl.className='ex-kg up';
     } else {
-      const dw=displayWeight(ex2,person,week,day);
-      const bw=resolvedWeight(ex2,person,week,day);
-      const show=dw||bw;
+      // Show highest kg entered this session, or planned weight
+      const entered=e&&e.series?e.series.filter(s=>s.kg!=null):[];
+      const enteredMax=entered.length>0?Math.max(...entered.map(s=>s.kg)):null;
+      const planned=resolvedWeight(ex2,person,week,day);
+      const show=enteredMax!=null?enteredMax:planned;
       if(show!=null)kgEl.innerHTML=`${show}<small> kg</small>`;
       kgEl.className='ex-kg';
     }
@@ -1110,9 +1113,9 @@ function renderAll(){
     let kgHtml='';
     if(baseW!==null){
       const showW=(isUpgraded&&e&&e.nextWeight)?e.nextWeight:(dispW||baseW);
-      kgHtml=`<div class="ex-kg${isUpgraded?' up':''}">${showW}<small> kg</small></div>`;
+      kgHtml=`<div class="ex-kg${isUpgraded?' up':''}" id="kg-${ex.id}">${showW}<small> kg</small></div>`;
     }else{
-      kgHtml=`<div class="ex-kg" style="font-size:13px;color:var(--muted)">—</div>`;
+      kgHtml=`<div class="ex-kg" id="kg-${ex.id}" style="font-size:13px;color:var(--muted)">—</div>`;
     }
 
     let panelContent='';
