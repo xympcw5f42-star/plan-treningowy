@@ -579,7 +579,7 @@ function recalcOverload(exId){
   if(!ex||ex.step===null)return;
   const e=ep(person,week,day,exId);
   const filledSeries=e.series.filter(s=>s.kg!=null&&s.reps!=null);
-  if(filledSeries.length===0){updateOverloadBox(exId,null,null,null);return;}
+  if(filledSeries.length===0){updateOverloadBox(exId,null,null,null);updateCardState(exId);return;}
   const maxKg=Math.max(...filledSeries.map(s=>s.kg));
   const minReps=Math.min(...filledSeries.map(s=>s.reps));
   const maxRange=ex.reps[1],minRange=ex.reps[0];
