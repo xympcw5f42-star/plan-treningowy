@@ -322,18 +322,65 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-s
 const DAYS=['Wtorek','Czwartek','Niedziela'];
 const PHASES=['Faza 1','Faza 1','Faza 2','Faza 2','Faza 3','Faza 3','Faza 4','Faza 4'];
 
-const EX=[
-  {id:'lawka', name:'Wyciskanie na ławce płaskiej',  sets:4,reps:[6,10], rest:120,cat:'klatka',         tag:null, sA:80, sB:90, step:2.5},
-  {id:'wioslo',name:'Wiosłowanie (maszyna/sztanga)', sets:4,reps:[6,10], rest:120,cat:'plecy',           tag:null, sA:60, sB:60, step:2.5},
-  {id:'squat', name:'Przysiady / leg press',         sets:4,reps:[8,12], rest:120,cat:'nogi',            tag:null, sA:50, sB:60, step:5  },
-  {id:'ohp',   name:'OHP — wyciskanie barków',       sets:3,reps:[8,12], rest:90, cat:'barki',           tag:null, sA:30, sB:30, step:2.5},
-  {id:'pull',  name:'Ściąganie wyciągu górnego',     sets:3,reps:[10,12],rest:90, cat:'plecy',           tag:null, sA:50, sB:60, step:2.5},
-  {id:'rdl',   name:'Martwy ciąg rumuński (RDL)',    sets:3,reps:[8,12], rest:90, cat:'nogi/plecy',      tag:'new',sA:60, sB:60, step:2.5},
-  {id:'tri',   name:'Triceps na wyciągu',            sets:3,reps:[12,15],rest:60, cat:'triceps',         tag:null, sA:35, sB:35, step:2.5},
-  {id:'bi',    name:'Biceps (hantle/wyciąg)',        sets:3,reps:[12,15],rest:60, cat:'biceps',          tag:null, sA:15, sB:15, step:2.5},
-  {id:'wznosy',name:'Wznosy bokiem',                 sets:3,reps:[15,20],rest:60, cat:'barki',           tag:null, sA:10, sB:10, step:2.5},
-  {id:'brzuch',name:'Plank / rollout',               sets:3,reps:[null,null],rest:60,cat:'core',         tag:'new',sA:null,sB:null,step:null},
+// TRENING A (cięższy) i B (lżejszy/akcesoryjny)
+const EX_A=[
+  {id:'a_lawka', name:'Wyciskanie na ławce płaskiej', sets:4,reps:[6,10], rest:120,cat:'klatka',    tag:null,  sA:80,  sB:80,  step:2.5},
+  {id:'a_wioslo',name:'Wiosłowanie sztangą',          sets:4,reps:[6,10], rest:120,cat:'plecy',     tag:null,  sA:60,  sB:60,  step:2.5},
+  {id:'a_squat', name:'Przysiady',                    sets:4,reps:[8,12], rest:120,cat:'nogi',      tag:null,  sA:50,  sB:50,  step:5  },
+  {id:'a_ohp',   name:'OHP — wyciskanie barków',      sets:3,reps:[8,12], rest:90, cat:'barki',     tag:null,  sA:30,  sB:30,  step:2.5},
+  {id:'a_pull',  name:'Ściąganie wyciągu górnego',    sets:3,reps:[10,12],rest:90, cat:'plecy',     tag:null,  sA:50,  sB:50,  step:2.5},
+  {id:'a_rdl',   name:'Martwy ciąg rumuński (RDL)',   sets:3,reps:[8,10], rest:105,cat:'nogi/plecy',tag:'tech',sA:60,  sB:60,  step:2.5},
+  {id:'a_brzuch',name:'Plank / rollout',              sets:3,reps:[null,null],rest:60,cat:'core',   tag:null,  sA:null,sB:null,step:null},
 ];
+
+const EX_B=[
+  {id:'b_legpress', name:'Leg press',                         sets:3,reps:[10,12],rest:105,cat:'nogi',   tag:null, sA:null,sB:null,step:5  },
+  {id:'b_klatka',   name:'Maszyna na klatkę',                 sets:3,reps:[8,12], rest:90, cat:'klatka', tag:null, sA:null,sB:null,step:2.5},
+  {id:'b_wioslo',   name:'Wiosłowanie na maszynie z podparciem',sets:3,reps:[10,12],rest:90,cat:'plecy', tag:null, sA:null,sB:null,step:2.5},
+  {id:'b_pull',     name:'Ściąganie wyciągu górnego',          sets:3,reps:[10,12],rest:90, cat:'plecy', tag:null, sA:null,sB:null,step:2.5},
+  {id:'b_ugleg',    name:'Uginanie nóg na maszynie',           sets:3,reps:[10,15],rest:90, cat:'nogi',  tag:null, sA:null,sB:null,step:2.5},
+  {id:'b_wznosy',   name:'Wznosy bokiem',                      sets:3,reps:[15,20],rest:60, cat:'barki', tag:null, sA:null,sB:null,step:2.5},
+  {id:'b_tri',      name:'Triceps na wyciągu',                  sets:3,reps:[12,15],rest:60, cat:'triceps',tag:null,sA:null,sB:null,step:2.5},
+  {id:'b_bi',       name:'Biceps (hantle / wyciąg)',            sets:3,reps:[12,15],rest:60, cat:'biceps',tag:null, sA:null,sB:null,step:2.5},
+  {id:'b_brzuch',   name:'Brzuch (plank / rollout / dead bug)', sets:3,reps:[null,null],rest:60,cat:'core',tag:null,sA:null,sB:null,step:null},
+];
+
+// Legacy plan (stary wtorek T1)
+const EX_LEGACY=[
+  {id:'lawka',  name:'Wyciskanie na ławce płaskiej',  sets:4,reps:[6,10], rest:120,cat:'klatka',    tag:null, sA:80,  sB:90,  step:2.5},
+  {id:'wioslo', name:'Wiosłowanie (maszyna/sztanga)', sets:4,reps:[6,10], rest:120,cat:'plecy',     tag:null, sA:60,  sB:60,  step:2.5},
+  {id:'squat',  name:'Przysiady / leg press',         sets:4,reps:[8,12], rest:120,cat:'nogi',      tag:null, sA:50,  sB:60,  step:5  },
+  {id:'ohp',    name:'OHP — wyciskanie barków',       sets:3,reps:[8,12], rest:90, cat:'barki',     tag:null, sA:30,  sB:30,  step:2.5},
+  {id:'pull',   name:'Ściąganie wyciągu górnego',     sets:3,reps:[10,12],rest:90, cat:'plecy',     tag:null, sA:50,  sB:60,  step:2.5},
+  {id:'rdl',    name:'Martwy ciąg rumuński (RDL)',    sets:3,reps:[8,12], rest:90, cat:'nogi/plecy',tag:'tech',sA:60, sB:60,  step:2.5},
+  {id:'tri',    name:'Triceps na wyciągu',            sets:3,reps:[12,15],rest:60, cat:'triceps',   tag:null, sA:35,  sB:35,  step:2.5},
+  {id:'bi',     name:'Biceps (hantle/wyciąg)',        sets:3,reps:[12,15],rest:60, cat:'biceps',    tag:null, sA:15,  sB:15,  step:2.5},
+  {id:'wznosy', name:'Wznosy bokiem',                 sets:3,reps:[15,20],rest:60, cat:'barki',     tag:null, sA:10,  sB:10,  step:2.5},
+  {id:'brzuch', name:'Plank / rollout',               sets:3,reps:[null,null],rest:60,cat:'core',   tag:null, sA:null,sB:null,step:null},
+];
+
+// Schedule: which training for each week+day
+// W1 Tue = legacy (already done), W1 Thu = B, W1 Sun = A
+// Odd weeks (1,3,5,7): Tue=A, Thu=B, Sun=A
+// Even weeks (2,4,6,8): Tue=B, Thu=A, Sun=B
+function getTrainingType(w, d) {
+  if (w === 1 && d === 0) return 'LEGACY';
+  if (w % 2 === 1) return d === 1 ? 'B' : 'A';
+  return d === 1 ? 'A' : 'B';
+}
+
+function getEX(w, d) {
+  const t = getTrainingType(w, d);
+  if (t === 'LEGACY') return EX_LEGACY;
+  return t === 'A' ? EX_A : EX_B;
+}
+
+// For backward compat — current session exercises
+function EX_cur() { return getEX(week, day); }
+
+// Legacy single EX reference replaced by getEX() calls
+const EX = EX_A; // used only for PR tab (show all exercises)
+const EX_ALL = [...EX_LEGACY, ...EX_A, ...EX_B];
 
 // ── STATE ───────────────────────────────────────────────────────────────────
 let ST={};
@@ -345,7 +392,8 @@ function ep(p,w,d,id){
   if(!ST[p][w])ST[p][w]={};
   if(!ST[p][w][d])ST[p][w][d]={};
   if(!ST[p][w][d][id]){
-    const ex=EX.find(e=>e.id===id);
+    const ex=EX_ALL.find(e=>e.id===id);
+    if(!ex)return ST[p][w][d][id]||{series:[]};
     ST[p][w][d][id]={series:Array.from({length:ex.sets},()=>({kg:null,reps:null,done:false})),nextWeight:null,upgraded:false,belowMin:false};
   }
   return ST[p][w][d][id];
@@ -409,36 +457,56 @@ function renderStreak(){
 
 // ── REST TIMER ───────────────────────────────────────────────────────────────
 let restInterval=null;
-let restSec=0;
+let restEndTime=null;
 
 function startRest(exId){
-  const ex=EX.find(e=>e.id===exId);
+  const ex=EX_ALL.find(e=>e.id===exId);
   if(!ex)return;
   clearInterval(restInterval);
-  restSec=ex.rest;
+  restEndTime=Date.now()+(ex.rest*1000);
   const toast=document.getElementById('restToast');
   document.getElementById('restExName').textContent=ex.name;
-  document.getElementById('restCountdown').textContent=restSec;
+  document.getElementById('restCountdown').textContent=ex.rest;
   toast.classList.add('show');
   restInterval=setInterval(()=>{
-    restSec--;
-    document.getElementById('restCountdown').textContent=restSec;
-    if(restSec<=0){
+    const remaining=Math.max(0,Math.ceil((restEndTime-Date.now())/1000));
+    document.getElementById('restCountdown').textContent=remaining;
+    if(remaining<=0){
       clearInterval(restInterval);
-      toast.classList.remove('show');
-      // vibrate if supported
+      restEndTime=null;
+      document.getElementById('restToast').classList.remove('show');
       if(navigator.vibrate)navigator.vibrate([200,100,200]);
     }
-  },1000);
+  },500);
 }
+
+// Recalc rest when page becomes visible again (screen unlock)
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&restEndTime){
+    const remaining=Math.max(0,Math.ceil((restEndTime-Date.now())/1000));
+    document.getElementById('restCountdown').textContent=remaining;
+    if(remaining<=0){
+      clearInterval(restInterval);
+      restEndTime=null;
+      document.getElementById('restToast').classList.remove('show');
+      if(navigator.vibrate)navigator.vibrate([200,100,200]);
+    }
+  }
+  // Also update workout timer display on return
+  if(document.visibilityState==='visible'&&timerStart){
+    updateTimerDisplay();
+  }
+});
 
 function skipRest(){
   clearInterval(restInterval);
+  restEndTime=null;
   document.getElementById('restToast').classList.remove('show');
 }
 
 // ── MAIN STATE ───────────────────────────────────────────────────────────────
-let person='A', week=1, day=0, openCards={}, mainTab='workout';
+let person=(()=>{try{return localStorage.getItem('gt4_person')||'A';}catch(e){return'A';}})();
+let week=1, day=0, openCards={}, mainTab='workout';
 
 function setMainTab(tab,el){
   mainTab=tab;
@@ -449,10 +517,15 @@ function setMainTab(tab,el){
   document.getElementById('statsTab').style.display=tab==='stats'?'flex':'none';
   if(tab==='pr')renderPR();
   if(tab==='stats')renderStats();
+  // Keep timer running when switching tabs — just update display
+  if(tab==='workout'&&timerStart){
+    updateTimerDisplay();
+  }
 }
 
 function setPerson(p,el){
   person=p;
+  try{localStorage.setItem('gt4_person',p);}catch(e){}
   document.querySelectorAll('.psw').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   openCards={};
@@ -463,10 +536,6 @@ function setPerson(p,el){
 
 function setWeek(w){
   week=w;openCards={};
-  if(timerInterval){clearInterval(timerInterval);timerInterval=null;timerStart=null;timerElapsed=0;
-    document.getElementById('timerBar').classList.remove('show');
-    document.getElementById('startWrap').style.display='';
-  }
   render();
 }
 
@@ -474,10 +543,6 @@ function setDay(d,el){
   day=d;openCards={};
   document.querySelectorAll('.dtab').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
-  if(timerInterval){clearInterval(timerInterval);timerInterval=null;timerStart=null;timerElapsed=0;
-    document.getElementById('timerBar').classList.remove('show');
-    document.getElementById('startWrap').style.display='';
-  }
   render();
 }
 
@@ -510,7 +575,7 @@ function toggleSerDone(exId,sIdx){
 }
 
 function recalcOverload(exId){
-  const ex=EX.find(e=>e.id===exId);
+  const ex=EX_ALL.find(e=>e.id===exId);
   if(!ex||ex.step===null)return;
   const e=ep(person,week,day,exId);
   const filledSeries=e.series.filter(s=>s.kg!=null&&s.reps!=null);
@@ -551,9 +616,18 @@ function updateCardState(exId){
   if(dot)dot.className='ex-dot'+(e.upgraded?' upgraded':hasData?' logged':'');
   const kgEl=card.querySelector('.ex-kg');
   if(kgEl){
-    const ex2=EX.find(ex=>ex.id===exId);
-    if(e.upgraded&&e.nextWeight!=null){kgEl.innerHTML=`${e.nextWeight}<small> kg</small>`;kgEl.className='ex-kg up';}
-    else{const dw=displayWeight(ex2,person,week,day);const bw=resolvedWeight(ex2,person,week,day);kgEl.innerHTML=`${dw||bw}<small> kg</small>`;kgEl.className='ex-kg';}
+    const ex2=EX_ALL.find(ex=>ex.id===exId);
+    if(!ex2)return;
+    if(e&&e.upgraded&&e.nextWeight!=null){
+      kgEl.innerHTML=`${e.nextWeight}<small> kg</small>`;
+      kgEl.className='ex-kg up';
+    } else {
+      const dw=displayWeight(ex2,person,week,day);
+      const bw=resolvedWeight(ex2,person,week,day);
+      const show=dw||bw;
+      if(show!=null)kgEl.innerHTML=`${show}<small> kg</small>`;
+      kgEl.className='ex-kg';
+    }
   }
 }
 
@@ -567,12 +641,15 @@ function formatTime(sec){
 }
 
 function updateTimerDisplay(){
-  const elapsed=timerElapsed+Math.floor((Date.now()-timerStart)/1000);
+  if(!timerStart)return;
+  const elapsed=Math.floor((Date.now()-timerStart)/1000);
   document.getElementById('timerDisplay').textContent=formatTime(elapsed);
 }
 
 function startWorkout(){
-  timerStart=Date.now();timerElapsed=0;
+  timerStart=Date.now();
+  // Persist start time so screen lock doesn't lose it
+  try{sessionStorage.setItem('wt_start',timerStart);}catch(e){}
   timerInterval=setInterval(updateTimerDisplay,1000);
   document.getElementById('startWrap').style.display='none';
   document.getElementById('timerBar').classList.add('show');
@@ -580,8 +657,9 @@ function startWorkout(){
 
 function finishWorkout(){
   clearInterval(timerInterval);
-  const totalSec=timerElapsed+(timerStart?Math.floor((Date.now()-timerStart)/1000):0);
+  const totalSec=timerStart?Math.floor((Date.now()-timerStart)/1000):0;
   timerStart=null;
+  try{sessionStorage.removeItem('wt_start');}catch(e){}
   if(!ST._completed)ST._completed={};
   ST._completed[`${person}-${week}-${day}`]=true;
   if(!ST._durations)ST._durations={};
@@ -660,7 +738,7 @@ function showCongratsOverlay(emoji,title,sub,upgrades,isWeek,durationSec){
   document.getElementById('congratsTitle').textContent=title;
   document.getElementById('congratsSub').textContent=sub;
   const dl2=ST?.[person]?.[week]?.[day]||{};
-  const totalSeries=EX.reduce((acc,ex)=>{
+  const totalSeries=getEX(week,day).reduce((acc,ex)=>{
     const e=dl2[ex.id];
     if(!e||!e.series)return acc;
     return acc+e.series.filter(s=>s.done||(s.kg!=null&&s.reps!=null)).length;
@@ -754,7 +832,7 @@ function confirmResetPR(exId){
 function renderPR(){
   const list=document.getElementById('prList');
   if(!list)return;
-  const prEx=EX.filter(e=>e.step!==null);
+  const prEx=EX_ALL.filter(e=>e.step!==null);
   let html=`<div class="pr-header">Rekordy osobiste — ${person==='A'?'Fińciu':'Śruba'}</div>`;
   prEx.forEach(ex=>{
     const records=getPR(person,ex.id);
@@ -805,7 +883,7 @@ function calcWeekStats(p, w) {
   for(let d=0;d<3;d++){
     const dl=ST?.[p]?.[w]?.[d]||{};
     let daySeries=0, dayKg=0;
-    EX.forEach(ex=>{
+    getEX(w,d).forEach(ex=>{
       const e=dl[ex.id];
       if(!e||!e.series)return;
       e.series.forEach(s=>{
@@ -876,7 +954,7 @@ function renderStats(){
     for(let d=0;d<3;d++){
       const dl=ST?.[person]?.[w]?.[d]||{};
       let daySeries=0,dayKg=0;
-      EX.forEach(ex=>{
+      getEX(w,d).forEach(ex=>{
         const e=dl[ex.id];
         if(!e||!e.series)return;
         e.series.forEach(s=>{
@@ -961,8 +1039,12 @@ function renderTL(){
 }
 
 function renderDayTabs(){
+  const dayNames=['Wt','Czw','Nd'];
   document.querySelectorAll('.dtab').forEach((tab,d)=>{
     tab.classList.remove('active','done');
+    const t=getTrainingType(week,d);
+    const label=t==='LEGACY'?'Wt (stary)':dayNames[d]+' '+t;
+    tab.textContent=label;
     if(d===day){tab.classList.add('active');return;}
     const isDone=!!(ST._completed&&ST._completed[`${person}-${week}-${d}`]);
     if(isDone)tab.classList.add('done');
@@ -973,11 +1055,13 @@ function renderStatus(){
   const row=document.getElementById('statusRow');
   const dl=ST?.[person]?.[week]?.[day]||{};
   const logged=Object.values(dl).filter(e=>e.series&&e.series.some(s=>s.kg!=null)).length;
-  const total=EX.filter(e=>e.step!==null).length;
+  const total=getEX(week,day).filter(e=>e.step!==null).length;
   const hasAny=Object.values(dl).some(e=>e.series&&e.series.some(s=>s.kg!=null||s.done));
+  const ttype=getTrainingType(week,day);
   row.innerHTML=`
     <div class="chip chip-lime">${PHASES[week-1]} · T${week}</div>
     <div class="chip chip-muted">${DAYS[day]}</div>
+    <div class="chip" style="background:${ttype==='A'?'rgba(206,240,78,.14)':'rgba(90,180,240,.1)'};color:${ttype==='A'?'var(--lime)':'var(--blue)'};border:1px solid ${ttype==='A'?'rgba(206,240,78,.25)':'rgba(90,180,240,.2)'}">Trening ${ttype}</div>
     ${logged>0?`<div class="chip chip-orange">${logged}/${total} zapisanych</div>`:''}
     ${hasAny?`<button class="reset-btn" onclick="showConfirm()">↺ resetuj</button>`:''}
   `;
@@ -993,22 +1077,23 @@ function renderAll(){
     html+=`<div class="day-sum">
       <div class="sum-item"><div class="sum-val">${loggedCount}</div><div class="sum-lbl">zapisanych</div></div>
       <div class="sum-item"><div class="sum-val">${upgrades}</div><div class="sum-lbl">awansów</div></div>
-      <div class="sum-item"><div class="sum-val">${EX.filter(e=>e.step!==null).length-loggedCount}</div><div class="sum-lbl">pozostało</div></div>
+      <div class="sum-item"><div class="sum-val">${EX_cur().filter(e=>e.step!==null).length-loggedCount}</div><div class="sum-lbl">pozostało</div></div>
     </div>`;
   }
 
-  EX.forEach((ex,idx)=>{
+  EX_cur().forEach((ex,idx)=>{
     const baseW=resolvedWeight(ex,person,week,day);
     const dispW=displayWeight(ex,person,week,day);
     const e=ST?.[person]?.[week]?.[day]?.[ex.id];
     const hasData=e&&e.series&&e.series.some(s=>s.kg!=null||s.reps!=null);
     const isUpgraded=e&&e.upgraded;
     const isOpen=!!openCards[ex.id];
-    const isTech=ex.id==='rdl'&&week<=2;
+    const isTech=ex.tag==='tech'&&week<=2;
     const prev=prevSessionData(ex,person,week,day);
 
     let tags='';
     if(ex.tag==='new')tags+=`<span class="etag etag-lime">nowe</span>`;
+    if(ex.tag==='tech'&&!isTech)tags+=`<span class="etag etag-lime">nowe</span>`;
     if(isTech)tags+=`<span class="etag etag-orange">nauka techniki</span>`;
 
     // Previous session summary
@@ -1112,6 +1197,23 @@ function renderAll(){
   });
   area.innerHTML=html;
 }
+
+// Restore active person button
+document.querySelectorAll('.psw').forEach(b=>{
+  b.classList.toggle('active', b.textContent.trim()===(person==='A'?'Fińciu':'Śruba'));
+});
+
+// Restore workout timer if page was reloaded mid-workout
+try{
+  const saved=sessionStorage.getItem('wt_start');
+  if(saved){
+    timerStart=parseInt(saved);
+    timerInterval=setInterval(updateTimerDisplay,1000);
+    document.getElementById('startWrap').style.display='none';
+    document.getElementById('timerBar').classList.add('show');
+    updateTimerDisplay();
+  }
+}catch(e){}
 
 render();
 </script>
